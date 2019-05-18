@@ -1,0 +1,186 @@
+clear; 
+clc;
+I = im2double(rgb2gray(imread('training/test.jpg')));
+% test.jpg/8hearts.jpg(3edges)/10hearts.jpg(con-clockwise)/Ahearts.jpg(clockwise)
+BW = imbinarize(I, 0.66);
+% figure;
+% imshowpair(I, BW, 'montage');
+% title('Synthetic Image & Binary Image');
+
+%% Remove small size and only keep white card
+% label the complement of the Binary Image
+imLabel = bwlabel(BW); % Judge carefully if it's BW or 1-BW
+% Find the card shape by finding the largest connected region
+stats = regionprops(imLabel,'Centroid', 'Area', 'Image', 'FilledImage', 'BoundingBox');
+[b,index]=sort([stats.Area],'descend');
+if length(stats)<1
+    BW2=imLabel;
+else
+    BW2=ismember(imLabel,index(1:1));
+end
+% Reverse complement
+% BW2 = 1-BW2;
+
+% figure;
+% imshowpair(BW, BW2, 'montage');
+% title('Binary Image & Edited Binary Image');
+
+%% Find lines
+findingLine = edge(BW2, 'canny');
+[H,T,R] = hough(findingLine);
+P  = houghpeaks(H,5,'threshold',ceil(0.3*max(H(:))));
+% change parameter if different data set
+% lines = houghlines(findingLine,T,R,P,'FillGap',3000,'MinLength',200);
+lines = houghlines(findingLine,T,R,P,'FillGap',3000);
+
+%plotEdges(I, lines);
+
+%% Arrange Edges to be adjacent in the order of 1234
+% line1-line2-line3-line4 are adjacent edges
+parallel_threshold = 10;
+line1 = lines(1);
+line2 = [];
+line3 = [];
+line4 = [];
+if abs(abs(lines(2).theta) - abs(line1.theta)) < parallel_threshold
+    line2 = lines(3);
+    line3 = lines(2);
+    line4 = lines(4);
+elseif abs(abs(lines(3).theta) - abs(line1.theta)) < parallel_threshold
+    line2 = lines(2);
+    line3 = lines(3);
+    line4 = lines(4);
+else
+    line2 = lines(2);
+    line3 = lines(4);
+    line4 = lines(3);
+end
+lines = [line1; line2; line3; line4];
+% plotEdges(I, lines);
+
+%% Get line equation -> find intersection -> find corners
+lineEquations = [];
+for j = 1:length(lines)
+    line = lines(j);
+    x1 = line.point1(1);
+    y1 = line.point1(2);
+    x2 = line.point2(1);
+    y2 = line.point2(2);
+    [k, b] = getLineEquation(x1, x2, y1, y2);
+    lineEquations = [lineEquations, struct('k', k, 'b', b, 'x', x1, 'y', y1)];
+end
+
+corners = [];
+corners(1,:) = getIntersection(lineEquations(1), lineEquations(2));
+corners(2,:) = getIntersection(lineEquations(2), lineEquations(3));
+corners(3,:) = getIntersection(lineEquations(3), lineEquations(4));
+corners(4,:) = getIntersection(lineEquations(1), lineEquations(4));
+
+% % plot corners
+% figure, imshow(BW), title('UnArranged Corners'), hold on
+% [a,b] = size(corners);
+% for zz = 1:a
+%     plot(corners(zz,1), corners(zz,2), 'x','LineWidth',2,'Color','yellow')
+%     text(corners(zz,1), corners(zz,2), num2str(zz), 'FontSize', 20, 'Color', 'red');
+% end
+
+%% Arrange Corners
+find centroid
+edgeImage = edge(BW);
+% [rows,cols] = size(edgeImage);
+% x = ones(rows,1)*[1:cols];
+% y = [1:rows]'*ones(1,cols);
+% area = sum(sum(edgeImage));
+% meanx = sum(sum(edgeImage.*x))/area;
+% meany = sum(sum(edgeImage.*y))/area;
+% meanPoint = [meanx, meany];
+stats = regionprops(edgeImage,'Centroid', 'Area', 'Image', 'FilledImage', 'BoundingBox');
+% figure, imshow(edgeImage), hold on;
+% plot(meanx,meany,'r+'); %十字标出重心位置
+%% 
+distanceToCentroid(1) = norm(corners(1, :) - meanPoint);
+distanceToCentroid(2) = norm(corners(2, :) - meanPoint);
+distanceToCentroid(3) = norm(corners(3, :) - meanPoint);
+distanceToCentroid(4) = norm(corners(4, :) - meanPoint);
+while min(distanceToCentroid) ~= distanceToCentroid(1)
+    corners = circshift(corners, 1);
+    distanceToCentroid(1) = norm(corners(1, :) - meanPoint);
+    distanceToCentroid(2) = norm(corners(2, :) - meanPoint);
+    distanceToCentroid(3) = norm(corners(3, :) - meanPoint);
+    distanceToCentroid(4) = norm(corners(4, :) - meanPoint);
+    
+end
+
+%plot corners
+figure, imshow(BW), title('Arranged Corners(the shortest edge to be 1-2(counterclock) or 1-4(clockwise))'), hold on
+[a,b] = size(corners);
+for zz = 1:a
+    plot(corners(zz,1), corners(zz,2), 'x','LineWidth',2,'Color','yellow')
+    text(corners(zz,1), corners(zz,2), num2str(zz), 'FontSize', 20, 'Color', 'red');
+end
+
+
+%% Functions
+function [k, b] = getLineEquation(x1, x2, y1, y2)
+if abs(x1 - x2) < 1e-6
+    k = -1;
+    b = -1;
+else
+    kb = [x1 1; x2 1]\[y1;y2];
+    k = kb(1);
+    b = kb(2);
+end
+end
+%%-------------------
+function z = plotEdges(Image, lines)
+figure, imshow(Image), hold on
+max_len = 0;
+for k = 1:length(lines)
+    xy = [lines(k).point1; lines(k).point2];
+    plot(xy(:,1),xy(:,2),'LineWidth',2,'Color','green');
+    % Plot beginnings and ends of lines
+    text(xy(1,1),xy(1,2),num2str(k), 'FontSize', 20, 'Color', 'red');
+    plot(xy(1,1),xy(1,2),'x','LineWidth',2,'Color','yellow');
+    plot(xy(2,1),xy(2,2),'x','LineWidth',2,'Color','red');
+    % Determine the endpoints of the longest line segment
+    len = norm(lines(k).point1 - lines(k).point2);
+    if ( len > max_len)
+        max_len = len;
+        xy_long = xy;
+    end
+end
+end
+%----------------
+function [corner] = getIntersection(line1, line2)
+x = 1;
+y = 1;
+% error
+if line1.b == -1 && line2.b == -1
+    x = 1
+end
+% line1 is vertical
+if line1.b == -1
+    x = line1.x;
+    y = line2.k * x + line2.b;
+    % line2 is vertical
+elseif line2.b == -1
+    x = line2.x;
+    y = line1.k * x + line1.b;
+    % Regular case
+else
+    x = (line2.b - line1.b)/(line1.k-line2.k);
+    y = line1.k * x +line1.b;
+end
+corner = [x y];
+end
+%----------------
+function [isolated_region, filled_region] = getRegionImages(region, im_threshed);
+%create an image with just the filled in card.
+ox = round(region.BoundingBox(1));
+oy = round(region.BoundingBox(2));
+ex = round(region.BoundingBox(3) + ox);
+ey = round(region.BoundingBox(4) + oy);
+filled_region = logical(zeros(size(im_threshed)));
+filled_region(oy:ey-1, ox:ex-1) = region.FilledImage;
+isolated_region = filled_region & logical(im_threshed);
+end
