@@ -4,8 +4,8 @@
 
 %% File read in, set parameters
 debug = 0;
-NUMBER_OF_CARDS_IN_THE_FIGURE = 1;
-I = im2double(rgb2gray(imread('training/3spades.jpg')));
+NUMBER_OF_CARDS_IN_THE_FIGURE = 5;
+I = im2double(rgb2gray(imread('training/test4.jpg')));
 % Inked8cards_top_LI.jpg/8card_slight.jpg
 detectedCards = [];
 rankTemplates = {...
@@ -25,6 +25,7 @@ C = {'club', 'heart', 'spade', 'diamond'};
 %% Preliminaries
 % Binarize the image
 BW = imbinarize(I, 0.66);
+
 % Remove small components(both black and white) of the binary image
 BW = ~bwareaopen(~BW, 100);
 BW = bwareaopen(BW, 1000);
@@ -34,6 +35,7 @@ if debug
     % imshowpair(I, BW, 'montage');
     % title('Synthetic Image & Binary Image');
 end
+
 %% Remove small size and only keep white card
 % Label the connect complements of the Binary Image
 imLabeled = bwlabel(BW); % Judge carefully if it's BW or 1-BW
@@ -56,6 +58,7 @@ if debug
     % imshowpair(BW, BW2, 'montage');
     % title('Binary Image & Edited Binary Image');
 end
+
 %% Find rankTemplatesConj & suitTemplatesConj
 templateCornerSize = [105, 67];
 dilateSize = 2;
@@ -183,9 +186,9 @@ for nRegion = 1:NUMBER_OF_CARDS_IN_THE_FIGURE
 end
 
 %% Result Display
-% figure, imshow(I)
-% for nRegion = 1:NUMBER_OF_CARDS_IN_THE_FIGURE
-%     printPosition = stats2(nRegion).Centroid;
-%     printStr = {num2str(detectedCards(nRegion, 1)), C{detectedCards(nRegion, 2)}};
-%     text(printPosition(1,1),printPosition(1,2), printStr, 'FontSize', 20, 'Color', 'red');
-% end
+figure, imshow(I)
+for nRegion = 1:NUMBER_OF_CARDS_IN_THE_FIGURE
+    printPosition = stats2(nRegion).Centroid;
+    printStr = {num2str(detectedCards(nRegion, 1)), C{detectedCards(nRegion, 2)}};
+    text(printPosition(1,1),printPosition(1,2), printStr, 'FontSize', 20, 'Color', 'red');
+end
