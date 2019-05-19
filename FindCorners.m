@@ -1,7 +1,10 @@
 function corners = FindCorners(I, BW2, debug)
-% Input: original image to be shown when debug, bianry image 
+% Input: original image to be shown when debug, bianry image
+
 % Output: corner coodinators in an double array
+
 % Target: Find margins & their equations -> find intersection -> find corners
+
 if nargin <= 2
     debug = 0;
 end
@@ -37,12 +40,15 @@ else
     line3 = lines(4);
     line4 = lines(3);
 end
+
 lines = [line1; line2; line3; line4];
+
 if debug
     plotEdges(BW2, lines);
 end
 %% Get line equation -> find intersection -> find corners
 lineEquations = [];
+
 for j = 1:length(lines)
     line = lines(j);
     x1 = line.point1(1);
@@ -70,57 +76,3 @@ if debug
 end
 
 end
-%----------------
-function [k, b] = getLineEquation(x1, x2, y1, y2)
-if abs(x1 - x2) < 1e-6
-    k = -1;
-    b = -1;
-else
-    kb = [x1 1; x2 1]\[y1;y2];
-    k = kb(1);
-    b = kb(2);
-end
-end
-%%-------------------
-function z = plotEdges(Image, lines)
-figure, imshow(Image), hold on
-max_len = 0;
-for k = 1:length(lines)
-    xy = [lines(k).point1; lines(k).point2];
-    plot(xy(:,1),xy(:,2),'LineWidth',2,'Color','green');
-    % Plot beginnings and ends of lines
-    text(xy(1,1),xy(1,2),num2str(k), 'FontSize', 20, 'Color', 'red');
-    plot(xy(1,1),xy(1,2),'x','LineWidth',2,'Color','yellow');
-    plot(xy(2,1),xy(2,2),'x','LineWidth',2,'Color','red');
-    % Determine the endpoints of the longest line segment
-    len = norm(lines(k).point1 - lines(k).point2);
-    if ( len > max_len)
-        max_len = len;
-        xy_long = xy;
-    end
-end
-end
-%----------------
-function [corner] = getIntersection(line1, line2)
-x = 1;
-y = 1;
-% error
-if line1.b == -1 && line2.b == -1
-    x = 1
-end
-% line1 is vertical
-if line1.b == -1
-    x = line1.x;
-    y = line2.k * x + line2.b;
-    % line2 is vertical
-elseif line2.b == -1
-    x = line2.x;
-    y = line1.k * x + line1.b;
-    % Regular case
-else
-    x = (line2.b - line1.b)/(line1.k-line2.k);
-    y = line1.k * x +line1.b;
-end
-corner = [x y];
-end
-%----------------

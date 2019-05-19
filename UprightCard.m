@@ -1,6 +1,8 @@
 function [upright_card] = UprightCard(original, orig_points)
 % Input: original image, coordinators of the corners
+
 % Output: 700 * 500 image
+
 % Target: maps each point to an 700* 500 image
 
 % We need four corners to do a projective transform

@@ -4,8 +4,8 @@
 
 %% File read in, set parameters
 debug = 0;
-NUMBER_OF_CARDS_IN_THE_FIGURE = 5;
-I = im2double(rgb2gray(imread('training/test4.jpg')));
+NUMBER_OF_CARDS_IN_THE_FIGURE = 6;
+I = im2double(rgb2gray(imread('training/Inked8cards_top_LI.jpg')));
 % Inked8cards_top_LI.jpg/8card_slight.jpg
 detectedCards = [];
 rankTemplates = {...
@@ -154,7 +154,7 @@ for nRegion = 1:NUMBER_OF_CARDS_IN_THE_FIGURE
     cropToSuit = imcrop(croppedCorners, [0,105,67,73]);
     
     if debug
-        %         figure, imshow(croppedCorners);
+        %figure, imshow(croppedCorners);
     end
     
     %% Rcognition
@@ -190,5 +190,5 @@ figure, imshow(I)
 for nRegion = 1:NUMBER_OF_CARDS_IN_THE_FIGURE
     printPosition = stats2(nRegion).Centroid;
     printStr = {num2str(detectedCards(nRegion, 1)), C{detectedCards(nRegion, 2)}};
-    text(printPosition(1,1),printPosition(1,2), printStr, 'FontSize', 20, 'Color', 'red');
+    text(printPosition(1,1),printPosition(1,2), printStr, 'FontSize', 14, 'Color', 'red');
 end
